@@ -1,21 +1,120 @@
 function automate() {
-  const openMsgSelector = "#ember216";
+  const openMoreOptions = "button[aria-label='More actions']";
+  const sendMsgSelelctor =
+    "div#ember76.artdeco-dropdown__item.artdeco-dropdown__item--is-dropdown.ember-view.full-width.display-flex.align-items-center[role='button']";
+  const subjectInputSelector = "input[name='subject']";
+  const msgInputSelector =
+    "div.msg-form__contenteditable[contenteditable='true']";
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     chrome.scripting.executeScript({
       target: { tabId: tabs[0].id },
-      func: clickButton,
-      args: [openMsgSelector], // your selector
+      func: run,
+      args: [
+        openMoreOptions,
+        sendMsgSelelctor,
+        subjectInputSelector,
+        msgInputSelector,
+      ], // your selector
     });
   });
-  function clickButton(selector) {
-    const btn = document.querySelector(selector);
-    if (btn) {
-      btn.click();
-      console.log(`Clicked button: ${selector}`);
+  async function run(
+    openMoreActionSelector,
+    opneMsgSelelctor,
+    subjectSelector,
+    msgSelector
+  ) {
+    const openMoreActionBtn = document.querySelector(openMoreActionSelector);
+    const openMsgBtn = document.querySelector(opneMsgSelelctor);
+    let subjectInput = document.querySelector(subjectSelector);
+    let msgInput = document.querySelector(msgSelector);
+    const subjectText = "Could this work for you too Frank?";
+    const msg = "I built this really effecient system to contact leads";
+    if (openMoreActionBtn) {
+      openMoreActionBtn.click();
+      console.log(`Clicked button: ${openMoreActionSelector}`);
+      setTimeout(() => {
+        if (openMsgBtn) {
+          openMsgBtn.click();
+          console.log("Clicked Open Msg");
+        } else {
+          console.error("Open Msg Not found");
+        }
+      }, 1500);
     } else {
-      console.log(`Button not found: ${selector}`);
+      console.error(`Button not found: ${openMoreActionSelector}`);
+    }
+    for (let i = 1; i < 6; i++) {
+      subjectInput = document.querySelector(subjectSelector);
+      msgInput = document.querySelector(msgSelector);
+      if (subjectInput && msgInput) {
+        console.log("Subject and Msg Found!!");
+        subjectInput.focus();
+        // Use a non-blocking async function for typing
+        (async () => {
+          for (let char of subjectText) {
+            const key = char;
+            subjectInput.dispatchEvent(
+              new KeyboardEvent("keydown", { key, bubbles: true })
+            );
+            subjectInput.dispatchEvent(
+              new KeyboardEvent("keypress", { key, bubbles: true })
+            );
+            subjectInput.value += char;
+            subjectInput.dispatchEvent(
+              new InputEvent("input", { bubbles: true, data: char })
+            );
+            subjectInput.dispatchEvent(
+              new KeyboardEvent("keyup", { key, bubbles: true })
+            );
+            await new Promise((r) => setTimeout(r, 100));
+          }
+          subjectInput.dispatchEvent(new Event("change", { bubbles: true }));
+        })().then(async () => {
+          msgInput.focus();
+          for (let char of msg) {
+            const key = char;
+
+            msgInput.dispatchEvent(
+              new KeyboardEvent("keydown", { key, bubbles: true })
+            );
+            msgInput.dispatchEvent(
+              new KeyboardEvent("keypress", { key, bubbles: true })
+            );
+
+            if ("value" in msgInput) {
+              // input/textarea
+              msgInput.value += char;
+            } else if (msgInput.isContentEditable) {
+              // contenteditable (better: execCommand)
+              document.execCommand("insertText", false, char);
+            }
+
+            msgInput.dispatchEvent(
+              new InputEvent("input", { bubbles: true, data: char })
+            );
+            msgInput.dispatchEvent(
+              new KeyboardEvent("keyup", { key, bubbles: true })
+            );
+
+            await new Promise((r) => setTimeout(r, 100));
+          }
+          msgInput.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+        break;
+      } else {
+        console.error("Subject and Msg Input not found, retry: #", i);
+      }
+      // Use setTimeout instead of await to avoid blocking
+      await new Promise((r) => setTimeout(r, 2000));
     }
   }
+}
+async function delay(time) {
+  return new Promise((res, _) => {
+    setTimeout(() => {
+      res("");
+    }, time);
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -184,18 +283,4 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("Please upload a file first.");
     }
   });
-
-  // Close button functionality (placeholder)
-  document.querySelector(".close-button").addEventListener("click", () => {
-    alert("Close button clicked! (This is a placeholder action)");
-    // In a real application, you might close a modal or navigate away
-  });
-
-  // Cancel button functionality (placeholder)
-  document.querySelector(".cancel-btn").addEventListener("click", () => {
-    alert("Cancel button clicked! (This is a placeholder action)");
-    // In a real application, you might close a modal or clear the form
-  });
-
-  // Download button functionality (placeholder)
 });

@@ -9,6 +9,7 @@
   "side_panel": {
     "default_path": "sidepanel.html"
   },
+  "host_permissions": ["<all_urls>"],
   "permissions": [
     "sidePanel",
     "contextMenus",
@@ -18,8 +19,8 @@
   ],
   "content_scripts": [
     {
-      "matches": ["https://www.linkedin.com/*"],
-      "js": ["content.js"]
+      "matches": ["<all_urls>"],
+      "js": ["sidepanel.js"]
     }
   ]
 }
