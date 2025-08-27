@@ -1,3 +1,5 @@
+const contentLoadWaitTime = 120000;
+const contentLoadDelay = 4000;
 const openMoreOptions = "button[aria-label='More actions']";
 const sendMsgSelelctor = "div[aria-label^='Message']";
 const subjectInputSelector = "input[name='subject']";
@@ -10,15 +12,8 @@ chrome.runtime.onMessage.addListener((msg) => {
       sendMsgSelelctor,
       subjectInputSelector,
       msgInputSelector,
-      msg.data.subject,
-      msg.data.message
-    ).then(() => {
-      chrome.runtime.sendMessage({
-        action: "closeTabStartNew",
-        tabId: msg.tabId,
-        id: msg.data.id,
-      });
-    });
+      msg
+    );
   }
 });
 async function run(
@@ -26,15 +21,17 @@ async function run(
   opneMsgSelelctor,
   subjectSelector,
   msgSelector,
-  subjectText,
-  msg
+  data
 ) {
   let openMoreActionBtn = document.querySelector(openMoreActionSelector);
   let openMsgBtn = document.querySelector(opneMsgSelelctor);
   let subjectInput = document.querySelector(subjectSelector);
   let msgInput = document.querySelector(msgSelector);
+  let msg = data.data.message;
+  let subjectText = data.data.subject;
+  let maxRetries = 0;
 
-  for (let j = 1; j < 16; j++) {
+  for (let j = 1; j < contentLoadWaitTime / contentLoadDelay; j++) {
     openMoreActionBtn = document.querySelector(openMoreActionSelector);
     openMsgBtn = document.querySelector(opneMsgSelelctor);
 
@@ -52,9 +49,9 @@ async function run(
     } else {
       console.error(`Button not found: ${openMoreActionSelector}`);
     }
-    await new Promise((r) => setTimeout(r, 4000));
+    await new Promise((r) => setTimeout(r, contentLoadDelay));
   }
-  for (let i = 1; i < 16; i++) {
+  for (let i = 1; i < contentLoadWaitTime / contentLoadDelay; i++) {
     subjectInput = document.querySelector(subjectSelector);
     msgInput = document.querySelector(msgSelector);
 
@@ -81,41 +78,59 @@ async function run(
           await new Promise((r) => setTimeout(r, 100));
         }
         subjectInput.dispatchEvent(new Event("change", { bubbles: true }));
-      })().then(async () => {
-        msgInput.focus();
-        for (let char of msg) {
-          const key = char;
-          msgInput.dispatchEvent(
-            new KeyboardEvent("keydown", { key, bubbles: true })
-          );
-          msgInput.dispatchEvent(
-            new KeyboardEvent("keypress", { key, bubbles: true })
-          );
+      })()
+        .then(async () => {
+          msgInput.focus();
+          for (let char of msg) {
+            const key = char;
+            msgInput.dispatchEvent(
+              new KeyboardEvent("keydown", { key, bubbles: true })
+            );
+            msgInput.dispatchEvent(
+              new KeyboardEvent("keypress", { key, bubbles: true })
+            );
 
-          if ("value" in msgInput) {
-            // input/textarea
-            msgInput.value += char;
-          } else if (msgInput.isContentEditable) {
-            // contenteditable (better: execCommand)
-            document.execCommand("insertText", false, char);
+            if ("value" in msgInput) {
+              // input/textarea
+              msgInput.value += char;
+            } else if (msgInput.isContentEditable) {
+              // contenteditable (better: execCommand)
+              document.execCommand("insertText", false, char);
+            }
+
+            msgInput.dispatchEvent(
+              new InputEvent("input", { bubbles: true, data: char })
+            );
+            msgInput.dispatchEvent(
+              new KeyboardEvent("keyup", { key, bubbles: true })
+            );
+
+            await new Promise((r) => setTimeout(r, 100));
           }
-
-          msgInput.dispatchEvent(
-            new InputEvent("input", { bubbles: true, data: char })
-          );
-          msgInput.dispatchEvent(
-            new KeyboardEvent("keyup", { key, bubbles: true })
-          );
-
-          await new Promise((r) => setTimeout(r, 100));
-        }
-        msgInput.dispatchEvent(new Event("change", { bubbles: true }));
-      });
+          msgInput.dispatchEvent(new Event("change", { bubbles: true }));
+        })
+        .then(() => {
+          chrome.runtime.sendMessage({
+            action: "closeTabStartNew",
+            tabId: data.tabId,
+            id: data.data.id,
+          });
+        });
       break;
     } else {
       console.error("Subject and Msg Input not found, retry: #", i);
     }
     // Use setTimeout instead of await to avoid blocking
-    await new Promise((r) => setTimeout(r, 4000));
+    await new Promise((r) => setTimeout(r, contentLoadDelay));
+  }
+  if (
+    i === contentLoadWaitTime / contentLoadDelay ||
+    j === contentLoadWaitTime / contentLoadDelay
+  ) {
+    chrome.runtime.sendMessage({
+      action: "closeTabStartNew",
+      tabId: data.tabId,
+      id: data.data.id,
+    });
   }
 }
