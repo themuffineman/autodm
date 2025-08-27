@@ -32,7 +32,9 @@ chrome.contextMenus.onClicked.addListener((data, tab) => {
 chrome.runtime.onMessage.addListener((msg, sender) => {
   if (msg.action === "init") {
     let jobs = msg.data;
-    chrome.storage.local.set({ jobs });
+    chrome.storage.local.remove("jobs", () => {
+      chrome.storage.local.set({ jobs });
+    });
     chrome.tabs.create({ url: jobs[0].url }, (tab) => {
       const tabId = tab.id;
       // 2. Wait for tab to finish loading
