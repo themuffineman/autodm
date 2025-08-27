@@ -1,0 +1,25 @@
+{
+  "name": "LinkedIn AutoDm System",
+  "version": "1",
+  "manifest_version": 3,
+  "description": "Automates the sending of LinkedIn Dms right in your browser.",
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "permissions": [
+    "sidePanel",
+    "contextMenus",
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/*"],
+      "js": ["content.js"]
+    }
+  ]
+}

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>File Uploader Component</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      body {
+        font-family: "DM Sans", sans-serif;
+        background-color: #f3f4f6;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 20px;
+      }
+
+      .uploader-container {
+        background-color: #fff;
+        border-radius: 12px;
+        border: solid black 1.5px;
+        width: 100%;
+        max-width: 500px;
+        padding: 24px;
+        position: relative;
+      }
+
+      .close-button {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        color: #9ca3af;
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+
+      .close-button:hover {
+        color: #6b7280;
+      }
+
+      .drag-area {
+        border: 2px dashed #3b82f6;
+        border-radius: 8px;
+        padding: 40px 20px;
+        text-align: center;
+        background-color: #eff6ff;
+        cursor: pointer;
+        transition: background-color 0.2s, border-color 0.2s;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 180px;
+      }
+
+      .drag-area.hover {
+        background-color: #e0f2fe;
+        border-color: #2563eb;
+      }
+
+      .drag-area img {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 10px;
+      }
+
+      .drag-area .icon {
+        font-size: 3rem;
+        color: #3b82f6;
+        margin-bottom: 1rem;
+      }
+
+      .drag-text {
+        color: #4b5563;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .choose-file-btn {
+        color: #3b82f6;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .choose-file-btn:hover {
+        text-decoration: underline;
+      }
+
+      .file-input {
+        display: none;
+      }
+
+      .file-details {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: #e0f2fe;
+        border-radius: 6px;
+        padding: 10px 15px;
+        margin-top: 20px;
+        border: 1px solid #90cdf4; /* Lighter blue border for subtlety */
+        position: relative; /* For positioning the close icon */
+      }
+
+      .file-details .file-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        overflow: hidden; /* To prevent text overflow */
+      }
+
+      .file-details .file-info .file-icon {
+        font-size: 1.5rem;
+        color: #3b82f6;
+      }
+
+      .file-details .file-info .file-name {
+        white-space: nowrap; /* Prevent line breaks */
+        overflow: hidden; /* Hide overflowing text */
+        text-overflow: ellipsis; /* Show ellipsis for clipped text */
+        color: #1f2937;
+        font-weight: 500;
+      }
+
+      .file-details .remove-file-btn {
+        background: none;
+        border: none;
+        color: #9ca3af;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: color 0.2s;
+        position: absolute; /* Positioned absolutely within .file-details */
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .file-details .remove-file-btn:hover {
+        color: #ef4444; /* Red on hover */
+      }
+
+      .info-text {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-top: 10px;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .cancel-btn {
+        background-color: #e5e7eb;
+        color: #4b5563;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s, color 0.2s;
+      }
+
+      .cancel-btn:hover {
+        background-color: #d1d5db;
+        color: #1f2937;
+      }
+
+      .next-btn {
+        background-color: #93c5fd; /* Light blue for disabled state */
+        color: #dbeafe;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: not-allowed;
+      }
+
+      .next-btn.active {
+        background-color: #3b82f6; /* Blue for active state */
+        color: #fff;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      .next-btn.active:hover {
+        background-color: #2563eb;
+      }
+      .begin-auto-btn {
+        background-color: #2563eb; /* Light blue for disabled state */
+        color: #ffffff;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div active-step="true" class="uploader-container">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-semibold text-gray-800">Upload file</h2>
+      </div>
+      <div class="uploader-content">
+        <div class="drag-area" id="dragArea">
+          <input
+            type="file"
+            id="fileInput"
+            class="file-input"
+            accept=".xls,.xlsx,.csv"
+          />
+          <i class="fas fa-cloud-upload-alt icon"></i>
+          <p class="drag-text">
+            Drag and Drop file here or
+            <label for="fileInput" class="choose-file-btn">Choose file</label>
+          </p>
+          <div id="filePreview" class="w-full"></div>
+          <!-- File preview will be inserted here -->
+        </div>
+
+        <div class="info-text">
+          <span>Supported formats: XLS, XLSX</span>
+          <span>Maximum size: 25MB</span>
+        </div>
+
+        <div class="actions">
+          <button class="cancel-btn">Cancel</button>
+          <button class="next-btn" id="nextButton">Next</button>
+        </div>
+      </div>
+    </div>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>
