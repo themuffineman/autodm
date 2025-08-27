@@ -25,9 +25,82 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.contextMenus.onClicked.addListener((data, tab) => {
-  // Store the last word in chrome.storage.session.
   chrome.storage.session.set({ lastWord: data.selectionText });
-
-  // Make sure the side panel is open.
   chrome.sidePanel.open({ tabId: tab.id });
+});
+
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (msg.action === "init") {
+    let jobs = msg.data;
+    chrome.storage.local.set({ jobs });
+    chrome.tabs.create({ url: jobs[0].url }, (tab) => {
+      const tabId = tab.id;
+      // 2. Wait for tab to finish loading
+      function onUpdated(updatedTabId, changeInfo) {
+        if (updatedTabId === tabId && changeInfo.status === "complete") {
+          chrome.tabs.onUpdated.removeListener(onUpdated);
+
+          // 3. Inject content script dynamically
+          chrome.scripting.executeScript(
+            {
+              target: { tabId },
+              files: ["automate.js"], // make sure this exists
+            },
+            () => {
+              // 4. Send message to content script with arguments
+              chrome.tabs.sendMessage(tabId, {
+                action: "runOnReady",
+                tabId,
+                data: {
+                  message: jobs[0].message,
+                  subject: jobs[0].subject,
+                  id: jobs[0].id,
+                },
+              });
+            }
+          );
+        }
+      }
+
+      chrome.tabs.onUpdated.addListener(onUpdated);
+    });
+  }
+  if (msg.action === "closeTabStartNew") {
+    chrome.tabs.remove(msg.tabId, () => {
+      console.log(`Tab ${tabIdToClose} closed`);
+    });
+    chrome.storage.local.get("jobs", (result) => {
+      const jobList = result.jobs || [];
+      const newJobs = jobList.filter((job) => job.id !== msg.id);
+      chrome.storage.local.set({ jobs: newJobs });
+      chrome.tabs.create({ url: newJobs[0].url }, (tab) => {
+        const tabId = tab.id;
+        function onUpdated(updatedTabId, changeInfo) {
+          if (updatedTabId === tabId && changeInfo.status === "complete") {
+            chrome.tabs.onUpdated.removeListener(onUpdated);
+            chrome.scripting.executeScript(
+              {
+                target: { tabId },
+                files: ["automate.js"], // make sure this exists
+              },
+              () => {
+                // 4. Send message to content script with arguments
+                chrome.tabs.sendMessage(tabId, {
+                  action: "runOnReady",
+                  tabId,
+                  data: {
+                    message: newJobs[0].message,
+                    subject: newJobs[0].subject,
+                    id: newJobs[0].id,
+                  },
+                });
+              }
+            );
+          }
+        }
+
+        chrome.tabs.onUpdated.addListener(onUpdated);
+      });
+    });
+  }
 });

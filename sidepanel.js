@@ -1,131 +1,22 @@
-function automate() {
-  const openMoreOptions = "button[aria-label='More actions']";
-  const sendMsgSelelctor =
-    "div#ember76.artdeco-dropdown__item.artdeco-dropdown__item--is-dropdown.ember-view.full-width.display-flex.align-items-center[role='button']";
-  const subjectInputSelector = "input[name='subject']";
-  const msgInputSelector =
-    "div.msg-form__contenteditable[contenteditable='true']";
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    chrome.scripting.executeScript({
-      target: { tabId: tabs[0].id },
-      func: run,
-      args: [
-        openMoreOptions,
-        sendMsgSelelctor,
-        subjectInputSelector,
-        msgInputSelector,
-      ], // your selector
-    });
-  });
-  async function run(
-    openMoreActionSelector,
-    opneMsgSelelctor,
-    subjectSelector,
-    msgSelector
-  ) {
-    const openMoreActionBtn = document.querySelector(openMoreActionSelector);
-    const openMsgBtn = document.querySelector(opneMsgSelelctor);
-    let subjectInput = document.querySelector(subjectSelector);
-    let msgInput = document.querySelector(msgSelector);
-    const subjectText = "Could this work for you too Frank?";
-    const msg = "I built this really effecient system to contact leads";
-    if (openMoreActionBtn) {
-      openMoreActionBtn.click();
-      console.log(`Clicked button: ${openMoreActionSelector}`);
-      setTimeout(() => {
-        if (openMsgBtn) {
-          openMsgBtn.click();
-          console.log("Clicked Open Msg");
-        } else {
-          console.error("Open Msg Not found");
-        }
-      }, 1500);
-    } else {
-      console.error(`Button not found: ${openMoreActionSelector}`);
-    }
-    for (let i = 1; i < 6; i++) {
-      subjectInput = document.querySelector(subjectSelector);
-      msgInput = document.querySelector(msgSelector);
-      if (subjectInput && msgInput) {
-        console.log("Subject and Msg Found!!");
-        subjectInput.focus();
-        // Use a non-blocking async function for typing
-        (async () => {
-          for (let char of subjectText) {
-            const key = char;
-            subjectInput.dispatchEvent(
-              new KeyboardEvent("keydown", { key, bubbles: true })
-            );
-            subjectInput.dispatchEvent(
-              new KeyboardEvent("keypress", { key, bubbles: true })
-            );
-            subjectInput.value += char;
-            subjectInput.dispatchEvent(
-              new InputEvent("input", { bubbles: true, data: char })
-            );
-            subjectInput.dispatchEvent(
-              new KeyboardEvent("keyup", { key, bubbles: true })
-            );
-            await new Promise((r) => setTimeout(r, 100));
-          }
-          subjectInput.dispatchEvent(new Event("change", { bubbles: true }));
-        })().then(async () => {
-          msgInput.focus();
-          for (let char of msg) {
-            const key = char;
-
-            msgInput.dispatchEvent(
-              new KeyboardEvent("keydown", { key, bubbles: true })
-            );
-            msgInput.dispatchEvent(
-              new KeyboardEvent("keypress", { key, bubbles: true })
-            );
-
-            if ("value" in msgInput) {
-              // input/textarea
-              msgInput.value += char;
-            } else if (msgInput.isContentEditable) {
-              // contenteditable (better: execCommand)
-              document.execCommand("insertText", false, char);
-            }
-
-            msgInput.dispatchEvent(
-              new InputEvent("input", { bubbles: true, data: char })
-            );
-            msgInput.dispatchEvent(
-              new KeyboardEvent("keyup", { key, bubbles: true })
-            );
-
-            await new Promise((r) => setTimeout(r, 100));
-          }
-          msgInput.dispatchEvent(new Event("change", { bubbles: true }));
-        });
-        break;
-      } else {
-        console.error("Subject and Msg Input not found, retry: #", i);
-      }
-      // Use setTimeout instead of await to avoid blocking
-      await new Promise((r) => setTimeout(r, 2000));
-    }
-  }
-}
-async function delay(time) {
-  return new Promise((res, _) => {
-    setTimeout(() => {
-      res("");
-    }, time);
+const jobList = [];
+function automate(data) {
+  chrome.runtime.sendMessage({
+    action: "init",
+    data,
   });
 }
-
 document.addEventListener("DOMContentLoaded", () => {
   const dragArea = document.getElementById("dragArea");
   const fileInput = document.getElementById("fileInput");
   const filePreview = document.getElementById("filePreview");
   const nextButton = document.getElementById("nextButton");
-  const tableContainer = document.querySelector("table");
   const uploaderContent = document.querySelector(".uploader-content");
   const uploaderContainer = document.querySelector(".uploader-container");
   const h2 = document.querySelector("h2");
+  const proccedAutomation = document.createElement("button");
+  proccedAutomation.classList.add("begin-auto-btn");
+  proccedAutomation.innerText = "Begin Automation";
+  proccedAutomation.onclick = automate();
   let uploadedFile = null; // To store the file object
 
   // Handle file selection
@@ -200,10 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const text = e.target.result;
       const rows = text.split("\n").filter((row) => row.trim() !== "");
       const table = document.createElement("table");
-      const proccedAutomation = document.createElement("button");
-      proccedAutomation.classList.add("begin-auto-btn");
-      proccedAutomation.innerText = "Begin Automation";
-      proccedAutomation.onclick = automate;
+
       h2.innerText = "Preview your sheet";
 
       table.style.width = "100%";
@@ -241,7 +129,6 @@ document.addEventListener("DOMContentLoaded", () => {
         table.appendChild(tr);
       });
 
-      // Wrap table in a scrollable div
       const tableWrapper = document.createElement("div");
       tableWrapper.style.maxWidth = "100%";
       tableWrapper.style.maxHeight = "50%";
@@ -256,6 +143,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
     reader.readAsText(file);
   };
+  const csvFileToJSONArray = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target.result;
+        const rows = text.split("\n").filter((row) => row.trim() !== "");
+        if (rows.length === 0) {
+          resolve([]);
+          return;
+        }
+        const headers = rows[0].split(",").map((h) => h.trim());
+        const data = rows.slice(1).map((row) => {
+          const values = row.split(",").map((v) => v.trim());
+          const obj = {};
+          headers.forEach((header, i) => {
+            obj[header] = values[i] || "";
+          });
+          return obj;
+        });
+        resolve(data);
+      };
+      reader.onerror = reject;
+      reader.readAsText(file);
+    });
+  };
+  proccedAutomation.addEventListener("click", () => {
+    if (uploadedFile) {
+      const data = csvFileToJSONArray(uploadedFile);
+      console.log("Data is", data);
+      automate(data);
+    }
+  });
 
   // Drag and Drop functionality
   dragArea.addEventListener("dragover", (event) => {
@@ -273,7 +192,6 @@ document.addEventListener("DOMContentLoaded", () => {
     handleFiles(event.dataTransfer.files);
   });
 
-  // "Next" button functionality (placeholder)
   nextButton.addEventListener("click", () => {
     if (nextButton.classList.contains("active")) {
       if (uploadedFile) {
