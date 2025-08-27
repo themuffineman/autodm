@@ -1,6 +1,6 @@
 {
   "name": "LinkedIn AutoDm System",
-  "version": "1",
+  "version": "1.0",
   "manifest_version": 3,
   "description": "Automates the sending of LinkedIn Dms right in your browser.",
   "background": {

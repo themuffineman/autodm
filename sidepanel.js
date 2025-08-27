@@ -1,4 +1,9 @@
 const jobList = [];
+
+/**
+ * Data should be in form of
+ * {id, subject, message, url}
+ */
 function automate(data) {
   chrome.runtime.sendMessage({
     action: "init",
@@ -16,7 +21,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const proccedAutomation = document.createElement("button");
   proccedAutomation.classList.add("begin-auto-btn");
   proccedAutomation.innerText = "Begin Automation";
-  proccedAutomation.onclick = automate();
   let uploadedFile = null; // To store the file object
 
   // Handle file selection
@@ -92,8 +96,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const rows = text.split("\n").filter((row) => row.trim() !== "");
       const table = document.createElement("table");
 
-      h2.innerText = "Preview your sheet";
-
       table.style.width = "100%";
       table.style.maxWidth = "100%";
       table.style.height = "300px";
@@ -125,7 +127,6 @@ document.addEventListener("DOMContentLoaded", () => {
           }
           tr.appendChild(cellElement);
         });
-
         table.appendChild(tr);
       });
 
@@ -136,7 +137,7 @@ document.addEventListener("DOMContentLoaded", () => {
       tableWrapper.appendChild(table);
 
       uploaderContainer.appendChild(tableWrapper);
-      uploaderContainer.appendChild(proccedAutomation);
+
       uploaderContent.style.display = "none";
       // alert("Success!");
     };
@@ -168,9 +169,10 @@ document.addEventListener("DOMContentLoaded", () => {
       reader.readAsText(file);
     });
   };
-  proccedAutomation.addEventListener("click", () => {
+
+  proccedAutomation.addEventListener("click", async () => {
     if (uploadedFile) {
-      const data = csvFileToJSONArray(uploadedFile);
+      const data = await csvFileToJSONArray(uploadedFile);
       console.log("Data is", data);
       automate(data);
     }
@@ -192,10 +194,14 @@ document.addEventListener("DOMContentLoaded", () => {
     handleFiles(event.dataTransfer.files);
   });
 
-  nextButton.addEventListener("click", () => {
+  nextButton.addEventListener("click", async () => {
     if (nextButton.classList.contains("active")) {
       if (uploadedFile) {
         csvFileToTable(uploadedFile);
+        uploaderContainer.appendChild(proccedAutomation);
+        h2.innerText = "Preview your sheet";
+        const json2 = await csvFileToJSONArray(uploadedFile);
+        console.log("CSV is", json2);
       }
     } else {
       alert("Please upload a file first.");
