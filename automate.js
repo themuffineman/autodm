@@ -1,4 +1,4 @@
-const contentLoadWaitTime = 120000;
+const contentLoadWaitTime = 30000;
 const contentLoadDelay = 4000;
 const openMoreOptions = "button[aria-label='More actions']";
 const sendMsgSelelctor = "div[aria-label^='Message']";
@@ -30,33 +30,49 @@ async function run(
   let msgInput = document.querySelector(msgSelector);
   let msg = data.data.message;
   let subjectText = data.data.subject;
+  let salesInsights = document.querySelector("h2.pvs-header__title");
   let maxRetries = 0;
+  let openMsgFound = false;
+  let subjectInputAndmsgInputFound = false;
+  let i = 1;
+  let j = 0;
 
-  for (let j = 1; j < contentLoadWaitTime / contentLoadDelay; j++) {
+  for (j = 1; j < contentLoadWaitTime / contentLoadDelay; j++) {
     openMoreActionBtn = document.querySelector(openMoreActionSelector);
     openMsgBtn = document.querySelector(opneMsgSelelctor);
+    salesInsights = document.querySelector("h2.pvs-header__title");
 
     if (openMoreActionBtn) {
       openMoreActionBtn.click();
       console.log(`Clicked button: ${openMoreActionSelector}`);
       await new Promise((r) => setTimeout(r, 2000));
       if (openMsgBtn) {
+        openMsgFound = true;
         openMsgBtn.click();
         console.log("Clicked Open Msg");
         break;
       } else {
-        console.error("Open Msg Not found");
+        console.log("Open Msg Not found");
       }
     } else {
-      console.error(`Button not found: ${openMoreActionSelector}`);
+      console.log(`Button not found: ${openMoreActionSelector}`);
     }
     await new Promise((r) => setTimeout(r, contentLoadDelay));
   }
-  for (let i = 1; i < contentLoadWaitTime / contentLoadDelay; i++) {
+  if (!openMsgFound) {
+    chrome.runtime.sendMessage({
+      action: "closeTabStartNew",
+      tabId: data.tabId,
+      id: data.data.id,
+    });
+  }
+  for (i = 1; i < contentLoadWaitTime / contentLoadDelay; i++) {
     subjectInput = document.querySelector(subjectSelector);
     msgInput = document.querySelector(msgSelector);
+    salesInsights = document.querySelector("h2.pvs-header__title");
 
     if (subjectInput && msgInput) {
+      subjectInputAndmsgInputFound = true;
       console.log("Subject and Msg Found!!");
       subjectInput.focus();
       // Use a non-blocking async function for typing
@@ -110,13 +126,26 @@ async function run(
           }
           msgInput.dispatchEvent(new Event("change", { bubbles: true }));
         })
-        .then(() => {
+        .then(async () => {
           const submitbtn = document.querySelector(submitBtnSelector);
-          if (submitbtn) {
-            submitbtn.click();
+          const msgContainer = document.querySelector(
+            "div.msg-form__msg-content-container"
+          );
+          if (msgContainer) {
+            msgContainer.focus();
+            await new Promise((r) => setTimeout(r, 2000));
+            if (submitbtn) {
+              // submitbtn.click();
+            } else {
+              console.log("Submit Btn not found");
+            }
           } else {
-            console.log("Submit Btn not found");
+            console.log("Msg container not found");
           }
+        })
+        .then(() => {
+          // await new Promise((r) => setTimeout(r, 15000));
+          return;
         })
         .then(() => {
           chrome.runtime.sendMessage({
@@ -127,15 +156,12 @@ async function run(
         });
       break;
     } else {
-      console.error("Subject and Msg Input not found, retry: #", i);
+      console.log("Subject and Msg Input not found, retry: #", i);
     }
     // Use setTimeout instead of await to avoid blocking
     await new Promise((r) => setTimeout(r, contentLoadDelay));
   }
-  if (
-    i === contentLoadWaitTime / contentLoadDelay ||
-    j === contentLoadWaitTime / contentLoadDelay
-  ) {
+  if (!subjectInputAndmsgInputFound) {
     chrome.runtime.sendMessage({
       action: "closeTabStartNew",
       tabId: data.tabId,

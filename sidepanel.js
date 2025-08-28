@@ -157,6 +157,26 @@ document.addEventListener("DOMContentLoaded", () => {
       skipEmptyLines: true,
       complete: (result) => {
         console.log("from papa", result.data);
+        // const formated = result.data.map((item) => {
+        //   const url = item.linkedInProfileUrl;
+        //   const name = item.firstName;
+        //   const msg = `
+        //     Hey ${name} am curious if this will work for you too.
+
+        //     I built a system that automatically responds to any leads that opt into your offer on Google/Facebook ads and sends them a personalized message within the first 5 mins.
+
+        //     Turns out responding within the first 5 minutes can increase conversion by 300%.
+
+        //     So that’s why I want to share this with you too. Can I send it over?
+        //   `;
+        //   const subject = `Would this work for you too ${name}`;
+        //   return {
+        //     subject,
+        //     message: msg,
+        //     url,
+        //   };
+        // });
+        // console.log("form abby!!", formated);
         jobList = result.data;
       },
     });
