@@ -1,4 +1,4 @@
-const jobList = [];
+let jobList = [];
 
 /**
  * Data should be in form of
@@ -90,91 +90,86 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const csvFileToTable = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target.result;
-      const rows = text.split("\n").filter((row) => row.trim() !== "");
-      const table = document.createElement("table");
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (result) => {
+        const rows = result.data;
+        if (!rows.length) return;
 
-      table.style.width = "100%";
-      table.style.maxWidth = "100%";
-      table.style.height = "300px";
-      table.style.maxHeight = "50%";
-      table.style.overflow = "auto";
-      table.style.display = "block";
-      table.style.background = "#fff";
-      table.style.border = "1px solid #e5e7eb";
-      table.style.borderCollapse = "collapse";
-      table.style.marginTop = "24px";
-      table.style.fontFamily = '"DM Sans", sans-serif';
+        const table = document.createElement("table");
+        table.style.width = "100%";
+        table.style.maxWidth = "100%";
+        table.style.height = "300px";
+        table.style.maxHeight = "50%";
+        table.style.overflow = "auto";
+        table.style.display = "block";
+        table.style.background = "#fff";
+        table.style.border = "1px solid #e5e7eb";
+        table.style.borderCollapse = "collapse";
+        table.style.marginTop = "24px";
+        table.style.fontFamily = '"DM Sans", sans-serif';
 
-      rows.forEach((row, rowIndex) => {
-        const tr = document.createElement("tr");
-        tr.style.background = rowIndex % 2 === 0 ? "#f3f4f6" : "#fff";
-
-        const cells = row.split(",");
-        cells.forEach((cell) => {
-          const cellElement =
-            rowIndex === 0
-              ? document.createElement("th")
-              : document.createElement("td");
-          cellElement.textContent = cell.trim();
-          cellElement.style.border = "1px solid #e5e7eb";
-          cellElement.style.padding = "8px 12px";
-          if (rowIndex === 0) {
-            cellElement.style.fontWeight = "bold";
-            cellElement.style.background = "#e0f2fe";
-          }
-          tr.appendChild(cellElement);
+        // Table header
+        const headerRow = document.createElement("tr");
+        Object.keys(rows[0]).forEach((key) => {
+          const th = document.createElement("th");
+          th.textContent = key;
+          th.style.border = "1px solid #e5e7eb";
+          th.style.padding = "8px 12px";
+          th.style.fontWeight = "bold";
+          th.style.background = "#e0f2fe";
+          headerRow.appendChild(th);
         });
-        table.appendChild(tr);
-      });
+        table.appendChild(headerRow);
 
-      const tableWrapper = document.createElement("div");
-      tableWrapper.style.maxWidth = "100%";
-      tableWrapper.style.maxHeight = "50%";
-      tableWrapper.style.overflow = "auto";
-      tableWrapper.appendChild(table);
+        // Table body
+        rows.forEach((row, rowIndex) => {
+          const tr = document.createElement("tr");
+          tr.style.background = rowIndex % 2 === 0 ? "#f3f4f6" : "#fff";
+          tr.style.width = "max-content";
 
-      uploaderContainer.appendChild(tableWrapper);
-
-      uploaderContent.style.display = "none";
-      // alert("Success!");
-    };
-
-    reader.readAsText(file);
-  };
-  const csvFileToJSONArray = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target.result;
-        const rows = text.split("\n").filter((row) => row.trim() !== "");
-        if (rows.length === 0) {
-          resolve([]);
-          return;
-        }
-        const headers = rows[0].split(",").map((h) => h.trim());
-        const data = rows.slice(1).map((row) => {
-          const values = row.split(",").map((v) => v.trim());
-          const obj = {};
-          headers.forEach((header, i) => {
-            obj[header] = values[i] || "";
+          Object.values(row).forEach((cell) => {
+            const td = document.createElement("td");
+            td.textContent = cell;
+            td.style.border = "1px solid #e5e7eb";
+            td.style.padding = "8px 12px";
+            tr.appendChild(td);
           });
-          return obj;
+          table.appendChild(tr);
         });
-        resolve(data);
-      };
-      reader.onerror = reject;
-      reader.readAsText(file);
+
+        const tableWrapper = document.createElement("div");
+        tableWrapper.style.maxWidth = "100%";
+        tableWrapper.style.maxHeight = "50%";
+        tableWrapper.style.overflow = "auto";
+        tableWrapper.appendChild(table);
+
+        uploaderContainer.appendChild(tableWrapper);
+
+        uploaderContent.style.display = "none";
+      },
+    });
+  };
+  const csvFileToJSONArray = async (file) => {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (result) => {
+        console.log("from papa", result.data);
+        jobList = result.data;
+      },
     });
   };
 
   proccedAutomation.addEventListener("click", async () => {
     if (uploadedFile) {
-      const data = await csvFileToJSONArray(uploadedFile);
-      console.log("Data is", data);
-      automate(data);
+      try {
+        await csvFileToJSONArray(uploadedFile);
+        automate(jobList);
+      } catch (error) {
+        console.error("Error converting csv file");
+      }
     }
   });
 
@@ -200,8 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
         csvFileToTable(uploadedFile);
         uploaderContainer.appendChild(proccedAutomation);
         h2.innerText = "Preview your sheet";
-        const json2 = await csvFileToJSONArray(uploadedFile);
-        console.log("CSV is", json2);
+        await csvFileToJSONArray(uploadedFile);
       }
     } else {
       alert("Please upload a file first.");

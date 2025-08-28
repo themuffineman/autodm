@@ -5,6 +5,7 @@ const sendMsgSelelctor = "div[aria-label^='Message']";
 const subjectInputSelector = "input[name='subject']";
 const msgInputSelector =
   "div.msg-form__contenteditable[contenteditable='true']";
+const submitBtnSelector = "button.msg-form__send-btn[type='submit']";
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.action === "runOnReady") {
     run(
@@ -108,6 +109,14 @@ async function run(
             await new Promise((r) => setTimeout(r, 100));
           }
           msgInput.dispatchEvent(new Event("change", { bubbles: true }));
+        })
+        .then(() => {
+          const submitbtn = document.querySelector(submitBtnSelector);
+          if (submitbtn) {
+            submitbtn.click();
+          } else {
+            console.log("Submit Btn not found");
+          }
         })
         .then(() => {
           chrome.runtime.sendMessage({
